@@ -1,5 +1,7 @@
 import sqlite3
 
+MAX_IP_ENTRIES = 15
+
 class DatabaseConnector():
 	def __init__(self, filename="db.db"):
 		self.__conn = sqlite3.connect(filename)
@@ -25,6 +27,9 @@ class DatabaseConnector():
 	
 	def insertHTTPConnection(self, ip, port, path, method, user_agent, body=''):
 		c = self.__conn.cursor()
+		for row in self.__conn.execute("SELECT count(src_ip) FROM http_connections WHERE src_ip='?'", (ip)):
+			if row[0] > MAX_IP_ENTRIES: return
+		
 		c.execute('''INSERT INTO http_connections
 		(src_ip, src_port, path, method, user_agent, body)
 		VALUES

@@ -19,8 +19,9 @@ if pid == 0:
 	os.dup2(fd2, 2) #STDERR
 	
 	# Start HTTP Server
-	http_server = createServer(9999)
-	http_server.serve_forever()
+	http_server = createServer()
+	
+	if os.fork() == 0: http_server.serve_forever()
 	
 	sys.exit(0)
 
