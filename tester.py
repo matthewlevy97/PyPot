@@ -1,3 +1,8 @@
+'''
+Used to test out development features
+Currently used to run the telnet server
+'''
+
 import sys
 sys.path.append(sys.path[0] + '/libs/')
 
