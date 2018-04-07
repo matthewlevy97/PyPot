@@ -1,36 +1,101 @@
-import shlex
 import sys
-from programs import programs, fileSystem
+from programs import programs, fileSystem, stdout, stderr
 
 class Shell():
-	def parse(self, cmd):
-		self.__data = cmd
-		self.__lex()
-		self.__process()
+	ERROR   = False
+	SUCCESS = True	
 	
-	def __lex(self):
-		self.__parsed = []
-		self.__data = self.__data.replace('||', ';')
-		for part1 in self.__data.split(';'):
-			part1 = part1.strip()
-			spl = []
-			for part2 in part1.split('&&'):
-				part2 = part2.strip()
-				spl.append(shlex.split(part2))
-			self.__parsed.append(spl)
+	FILE = 'file'
+	CMD_OUTPUT = 'cmd_out'
 	
-	def __process(self):
-		for statement in self.__parsed:
-			for cmd in statement:
-				if not self.__lookupCommand(cmd):
-					# If the command failed
-					break
-	def __lookupCommand(self, cmd):
-		if cmd[0] in programs:
-			programs[cmd[0]].execute(cmd[1:])
-			return True
-		sys.stderr.write('%s: command not found' % cmd[0])
-		return False
+	CMD = 'cmd'
+	OR  = 'or'
+	AND = 'and'
+	
+	def restart(self):
+		fileSystem.reset()
+	
+	def parse(self, unparsedCMD):
+		self.__data = unparsedCMD
+		
+		# Build statements
+		parsed = []
+		
+		cmd = self.__generateCMD()
+		parsed.append(cmd)
+		
+		getOutFileName = False
+		getInFileName  = False
+		for dat in self.__data:
+			if not cmd['cmd']:
+				cmd['cmd'] = dat
+			else:
+				# Parameter or statement seperator
+				if dat == ';':
+					getOutFileName = False
+					getInFileName  = False
+					if cmd['cmd']:
+						cmd = self.__generateCMD()
+						parsed.append(cmd)
+				
+				elif dat == '|':
+					getOutFileName = False
+					getInFileName  = False
+					cmd['output'] = {'type': self.CMD_OUTPUT, 'out_cmd': self.__generateCMD()}
+					cmd = cmd['output']['out_cmd']
+					
+				
+				elif dat == '||':
+					getOutFileName = False
+					getInFileName  = False
+				elif dat == '&&':
+					getOutFileName = False
+					getInFileName  = False
+				
+				elif getOutFileName:
+					cmd['output']['fileName'] = dat
+				elif getInFileName:
+					cmd['input']['fileName']  = dat
+				elif dat == '>':
+					cmd['output'] = {'overwrite': True, 'type': self.FILE}
+					getOutFileName = True
+				elif dat == '>>':
+					cmd['output'] = {'overwrite': False, 'type': self.FILE}
+					getOutFileName = True
+				elif dat == '<':
+					getInFileName = True
+				
+				else:
+					cmd['params'].append(dat)
+		
+		# Process statements
+		return_output = {'stdout': '', 'stderr': ''}
+		for statement in parsed:
+			if statement['type'] == self.CMD:
+				self.__lookupCommand(statement['cmd'], statement['params'])
+				out = stdout.read()
+				err = stderr.read()
+				if statement['output']:
+					if statement['output']['type'] == self.FILE:
+						fileObj = fileSystem.open(statement['output']['fileName'])
+						fileObj.write(out, overwrite=statement['output']['overwrite'])
+						fileSystem.save(fileObj)
+				else:
+					return_output['stdout'] += out
+					return_output['stderr'] += err
+		if return_output['stdout'].endswith('\r\n'):
+			return_output['stdout'] = return_output['stdout'][:-2]
+		if return_output['stderr'].endswith('\r\n'):
+			return_output['stderr'] = return_output['stderr'][:-2]
+		return return_output
+	
+	def __generateCMD(self):
+		return {'type': self.CMD, 'cmd': '', 'params': [], 'input': None, 'output': None}
+	
+	def __lookupCommand(self, cmd, params):
+		if cmd in programs:
+			return programs[cmd].execute(params)
+		return None
 					
 		
 

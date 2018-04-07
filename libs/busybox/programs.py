@@ -1,7 +1,19 @@
 from fs import *
-import sys
 
 fileSystem = FileSystem()
+
+class Output():
+	def __init__(self):
+		self.__dataLog = ''
+	def read(self):
+		tmp = self.__dataLog
+		self.__dataLog = ''
+		return tmp
+	def write(self, data):
+		self.__dataLog += data
+
+stdout = Output()
+stderr = Output()
 
 class wget():
 	def execute(self, opts=[]):
@@ -11,14 +23,14 @@ class cat():
 	def execute(self, opts=[]):
 		f = fileSystem.open(opts[0])
 		if f.exists():
-			sys.stdout.write(f.read() + '\r\n')
+			stdout.write(f.read())
 		else:
-			sys.stderr.write('cat: %s: No such file or directory\r\n' % opts[0])
+			stderr.write('cat: %s: No such file or directory\r\n' % opts[0])
 
 class touch():
 	def execute(self, opts=[]):
 		if len(opts) == 0:
-			sys.stderr.write("touch: missing file operand\r\nTry 'touch --help' for more information.\r\n")
+			stderr.write("touch: missing file operand\r\nTry 'touch --help' for more information.\r\n")
 			return
 
 class echo():
@@ -26,7 +38,7 @@ class echo():
 		s = ''
 		for o in opts:
 			s += o + ' '
-		sys.stdout.write(s + '\r\n')
+		stdout.write(s + '\r\n')
 
 class ls():
 	def execute(self, opts=[]):
@@ -37,21 +49,18 @@ class ls():
 				options.append(o)
 			else:
 				path.append(o)
-		print options
-		print path
-		
 		if path == []:
 			path.append('')
 		
 		for p in path:
 			for f in fileSystem.getFiles(p):
-				sys.stdout.write('%s\t' % f)
-			sys.stdout.write('\r\n')
+				stdout.write('%s\t' % f)
+			stdout.write('\r\n')
 
 class rm():
 	def execute(self, opts=[]):
 		if len(opts) == 0:
-			sys.stderr.write("rm: missing operand\r\nTry 'rm --help' for more information.\r\n")
+			stderr.write("rm: missing operand\r\nTry 'rm --help' for more information.\r\n")
 			return
 		
 		for o in opts:
@@ -59,7 +68,7 @@ class rm():
 				continue
 			f = fileSystem.open(o)
 			if not f.read():
-				sys.stderr.write("rm: cannot remove '%s': No such file or directory\r\n" % o)
+				stderr.write("rm: cannot remove '%s': No such file or directory\r\n" % o)
 				break
 
 class exit():
@@ -70,10 +79,13 @@ class cd():
 	def execute(self, opts=[]):
 		if len(opts) > 0:
 			if not fileSystem.setCWD(opts[0]):
-				sys.stderr.write("bash: cd: %s: No such file or directory" % opts[0])
+				stderr.write("bash: cd: %s: No such file or directory" % opts[0])
+		else:
+			# Move to home directory if nothing provided
+			fileSystem.setCWD(fileSystem.HOME_DIR)
 
 class pwd():
 	def execute(self, opts=[]):
-		sys.stdout.write(fileSystem.getCWD() + '\r\n')
+		stdout.write(fileSystem.getCWD() + '\r\n')
 
 programs = {'wget': wget(), 'cat': cat(), 'touch': touch(), 'echo': echo(), 'ls': ls(), 'rm': rm(), 'exit': exit(), 'cd': cd(), 'pwd': pwd()}

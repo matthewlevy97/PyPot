@@ -21,7 +21,7 @@ Various settings can affect the operation of the server:
                    Function.__doc__ should be long help
                    Function.aliases may be a list of alternative spellings
 """
-
+from busybox.busybox import *
 import SocketServer
 import socket
 import sys
@@ -477,6 +477,7 @@ class TelnetHandlerBase(SocketServer.BaseRequestHandler):
             for alias in getattr(method, "aliases", []):
                 self.COMMANDS[alias.upper()] = self.COMMANDS[name]
                     
+        self.__shell = Shell()
         SocketServer.BaseRequestHandler.__init__(self, request, client_address, server)
     
     class false_request(object):
@@ -528,7 +529,7 @@ class TelnetHandlerBase(SocketServer.BaseRequestHandler):
         self.session_end()
 
     def session_start(self):
-        pass
+        self.__shell.restart()
         
     def session_end(self):
         pass
@@ -981,12 +982,33 @@ class TelnetHandlerBase(SocketServer.BaseRequestHandler):
         self.session_start()
         while self.RUNSHELL:
             raw_input = self.readline(prompt=self.PROMPT).strip()
-            print raw_input
             self.input = self.input_reader(self, raw_input)
             self.raw_input = self.input.raw
             if self.input.cmd:
-                cmd = self.input.cmd.upper()
+                cmd = self.input.cmd
                 params = self.input.params
+                
+		# Custom code for this project
+		if cmd == 'exit' or cmd == 'quit':
+			self.RUNSHELL = False
+			self.writeline("Goodbye")
+		elif cmd == 'history':
+			cnt = 0
+			self.writeline('Command history\n')
+			for line in self.history:
+				cnt = cnt + 1
+				self.writeline("%-5d : %s" % (cnt, ''.join(line)))
+		else:
+	                shell_result = self.__shell.parse([cmd] + params)
+			if shell_result:
+				if shell_result['stdout']:
+					self.writeresponse(shell_result['stdout'])
+				if shell_result['stderr']:
+					self.writeerror(shell_result['stderr'])
+			else:
+				self.writeerror(self.ERROR_MSG % cmd)
+                
+                '''
                 if self.COMMANDS.has_key(cmd):
                     try:
                         self.COMMANDS[cmd](params)
@@ -997,6 +1019,7 @@ class TelnetHandlerBase(SocketServer.BaseRequestHandler):
                             break
                 else:
                     self.writeerror("Unknown command '%s'" % cmd)
+                '''
         self.logging.debug("Exiting handler")
 
 

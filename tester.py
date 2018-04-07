@@ -1,5 +1,5 @@
 import sys
-sys.path.append('libs/')
+sys.path.append(sys.path[0] + '/libs/')
 
 from modules.TelnetServer import *
 

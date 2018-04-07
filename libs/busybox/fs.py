@@ -1,27 +1,54 @@
-from config import config
 import hashlib
 import json
 
 class FileSystem():
+	HOME_DIR = '/'
+	
 	def __init__(self):
-		with open('fs.json', 'r') as f:
+		self.reset()
+	
+	def reset(self):
+		with open('libs/busybox/fs.json', 'r') as f:
 			self.__files = json.load(f)
 		self.__cwd = []
 	
-	def __getPath(self, path):
+	def __followPath(self, path):
 		cwd = self.__files
-		for c in self.__cwd:
-			if c in cwd and 'subfolders' in cwd[c]:
-				cwd = cwd[c]['subfolders']
 		
-		if path:
-			for d in path.split('/'):
-				if d not in cwd:
-					return None
-				if 'type' not in cwd[d] or cwd[d]['type'] != 'd':
-					return None
-				cwd = cwd[d]['subfolders']
+		for d in path.split('/'):
+			if not d: break
+			if d not in cwd:
+				return None
+			if 'type' not in cwd[d] or cwd[d]['type'] != 'd':
+				return None
+			cwd = cwd[d]['subfolders']
 		return cwd
+	
+	def __parsePath(self, path):
+		cwd = []
+		
+		# Generate absolute path
+		for d in path:
+			if d == '..':
+				if len(cwd) > 0:
+					cwd.pop()
+			elif d == '.':
+				continue
+			else:
+				cwd.append(d)
+		
+		# Combine array to generate absolute path and return
+		return '/'.join(cwd)
+		
+	def __getPath(self, path):
+		# Check if path is relative or absolute
+		if path and path[0] == '/':
+			# Path is absolute
+			path = self.__parsePath(path[1:].split('/'))
+		else:
+			# Path is relative
+			path = self.__parsePath(self.__cwd + path.split('/'))
+		return self.__followPath(path)
 	
 	def open(self, fileName):
 		if fileName[0] == '/':
@@ -56,55 +83,53 @@ class FileSystem():
 		m = hashlib.sha1()
 		m.update(fileObj.getData())
 		fileName = m.hexdigest()
-		with open(config['SAVE_FILE_DIRECTORY'] + fileName, 'w') as f:
+		with open('mal_folder/' + fileName, 'w') as f:
 			f.write(fileObj.getData())
 		
 		fileName = fileObj.getFilename()
 		cwd = self.__getPath(fileObj.getPath())
+		
+		# Are we in a directory?
 		if cwd == None:
 			return False
 		
-		if fileName not in cwd or cwd[fileName]['type'] != 'f':
+		# Create the file if it does not exist
+		if fileName not in cwd:
+			cwd[fileName] = {'type': 'f', 'contents': ''}
+		
+		# If the file already exists and is a directory, don't do anything
+		if cwd[fileName]['type'] != 'f':
 			return False
 		
 		cwd[fileName]['contents'] = fileObj.getData()
 		return True
 	
-	def setCWD(self, cwd):
-		if cwd == '/':
-			self.__cwd = []
-			return True
-		if cwd == '.': return True
-		if cwd == '..':
-			self.__cwd = self.__cwd[:-1]
-			return True
+	def setCWD(self, path):
+		# Check if path is relative or absolute
+		if path and path[0] == '/':
+			# Path is absolute
+			path = self.__parsePath(path[1:].split('/'))
+		else:
+			# Path is relative
+			path = self.__parsePath(self.__cwd + path.split('/'))
 		
-		# Split new cwd
-		if cwd[0] == '/':
-			cwd = cwd[1:]
-		elif len(self.__cwd) > 0:
-			cwd = '/'.join(self.__cwd) + '/' + cwd
-		spl = cwd.split('/')
-		
+		cwd = self.__files
 		tmp = []
-		current_dir = self.__files
-		for d in spl:
-			if d in current_dir and 'subfolders' in current_dir[d]:
-				tmp.append(d)
-				current_dir = current_dir[d]['subfolders']
-			else:
-				tmp = []
-				break
-		if tmp == []:
-			return False
-		
+		for d in path.split('/'):
+			if not d: break
+			if d not in cwd:
+				return False
+			if 'subfolders' not in cwd[d] or 'type' not in cwd[d] or cwd[d]['type'] != 'd':
+				return False
+			
+			tmp.append(d)
+			cwd = cwd[d]['subfolders']
 		self.__cwd = tmp
 		return True
 	def getCWD(self):
 		return '/' + '/'.join(self.__cwd)
 	
 	# Returns files in current working directory
-	# TODO: Breaks if path starts with a '/'
 	def getFiles(self, path=''):
 		return self.__getPath(path).keys()
 	
