@@ -2,7 +2,7 @@ import os
 import sys
 
 from database import databaseConnection
-from HTTPServer import createServer
+from modules.HTTPServer import createServer
 
 # Setup the database
 databaseConnection.createDatabase()
@@ -13,8 +13,6 @@ if pid == 0:
 	# Setup outputing to log file
 	fd = os.open(".debug.log", os.O_RDWR | os.O_CREAT | os.O_APPEND)
 	fd2 = os.open("access.log", os.O_RDWR | os.O_CREAT | os.O_APPEND)
-	os.close(1)
-	os.close(2)
 	os.dup2(fd, 1) #STDOUT
 	os.dup2(fd2, 2) #STDERR
 	

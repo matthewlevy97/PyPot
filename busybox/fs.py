@@ -9,20 +9,24 @@ class FileSystem():
 		self.__cwd = []
 	
 	def __getPath(self, path):
-		cwd = None
+		cwd = self.__files
 		for c in self.__cwd:
-			cwd = self.__files[c]['subfolders']
+			if c in cwd and 'subfolders' in cwd[c]:
+				cwd = cwd[c]['subfolders']
 		
-		for d in path.split('/'):
-			if d not in cwd:
-				return None
-			if 'type' not in cwd[d] or cwd[d]['type'] != 'd':
-				return None
-			cwd = cwd[d]['subfolders']
+		if path:
+			for d in path.split('/'):
+				if d not in cwd:
+					return None
+				if 'type' not in cwd[d] or cwd[d]['type'] != 'd':
+					return None
+				cwd = cwd[d]['subfolders']
 		return cwd
 	
 	def open(self, fileName):
-		if fileName[0] == '/': fileName = fileName[1:]
+		if fileName[0] == '/':
+			fileName = fileName[1:]
+		
 		fileName = fileName.split('/')
 		
 		path = fileName[:-1]
@@ -65,18 +69,47 @@ class FileSystem():
 		
 		cwd[fileName]['contents'] = fileObj.getData()
 		return True
-		
+	
 	def setCWD(self, cwd):
-		tmp = cwd
+		if cwd == '/':
+			self.__cwd = []
+			return True
+		if cwd == '.': return True
+		if cwd == '..':
+			self.__cwd = self.__cwd[:-1]
+			return True
+		
+		# Split new cwd
 		if cwd[0] == '/':
 			cwd = cwd[1:]
-			tmp = fs
+		elif len(self.__cwd) > 0:
+			cwd = '/'.join(self.__cwd) + '/' + cwd
+		spl = cwd.split('/')
 		
-		for d in cwd.split('/'):
-			self.__cwd.append(d)
+		tmp = []
+		current_dir = self.__files
+		for d in spl:
+			if d in current_dir and 'subfolders' in current_dir[d]:
+				tmp.append(d)
+				current_dir = current_dir[d]['subfolders']
+			else:
+				tmp = []
+				break
+		if tmp == []:
+			return False
 		
+		self.__cwd = tmp
+		return True
 	def getCWD(self):
 		return '/' + '/'.join(self.__cwd)
+	
+	# Returns files in current working directory
+	# TODO: Breaks if path starts with a '/'
+	def getFiles(self, path=''):
+		return self.__getPath(path).keys()
+	
+	def __str__(self):
+		return json.dumps(self.__files, indent=4)
 
 class File():
 	def __init__(self, fileName, data=None, path=''):
@@ -108,9 +141,5 @@ class File():
 if __name__ == '__main__':
 	fs = FileSystem()
 	print fs.getCWD()
-	fs.setCWD('/etc')
+	print fs.setCWD('/bin')
 	print fs.getCWD()
-	
-	f = fs.open('passwd')
-	print f.exists()
-	print f.read()

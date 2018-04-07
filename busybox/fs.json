@@ -1,1 +1,1 @@
-{"etc": {"subfolders": {"passwd": {"type": "f", "contents": "root:x:0:0:root:/root:/bin/bash"}}, "type": "d"}}
+{"etc": {"subfolders": {"passwd": {"type": "f", "contents": "root:x:0:0:root:/root:/bin/bash"}, "apache2": {"subfolders": {"config.cfg": {"type": "f", "contents": "test config file"}}, "type": "d"}}, "type": "d"}}

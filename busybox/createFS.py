@@ -28,6 +28,7 @@ def createFile(fileName, data):
 
 if __name__ == '__main__':
 	createFile('/etc/passwd', 'root:x:0:0:root:/root:/bin/bash')
+	createFile('/etc/apache2/config.cfg', 'test config file')
 	
 	with open('fs.json', 'w') as f:
 		json.dump(fs, f)

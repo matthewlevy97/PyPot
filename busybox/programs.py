@@ -11,7 +11,7 @@ class cat():
 	def execute(self, opts=[]):
 		f = fileSystem.open(opts[0])
 		if f.exists():
-			sys.stdout.write(f.read())
+			sys.stdout.write(f.read() + '\r\n')
 		else:
 			sys.stderr.write('cat: %s: No such file or directory\r\n' % opts[0])
 
@@ -30,7 +30,23 @@ class echo():
 
 class ls():
 	def execute(self, opts=[]):
-		pass
+		options = []
+		path    = []
+		for o in opts:
+			if o[0] == '-':
+				options.append(o)
+			else:
+				path.append(o)
+		print options
+		print path
+		
+		if path == []:
+			path.append('')
+		
+		for p in path:
+			for f in fileSystem.getFiles(p):
+				sys.stdout.write('%s\t' % f)
+			sys.stdout.write('\r\n')
 
 class rm():
 	def execute(self, opts=[]):
