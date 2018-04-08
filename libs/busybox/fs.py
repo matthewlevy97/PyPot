@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 
 class FileSystem():
 	HOME_DIR = '/'
@@ -8,7 +9,7 @@ class FileSystem():
 		self.reset()
 	
 	def reset(self):
-		with open('fs.json', 'r') as f:
+		with open(os.path.dirname(os.path.abspath(__file__)) + '/fs.json', 'r') as f:
 			self.__files = json.load(f)
 		self.__cwd = []
 	

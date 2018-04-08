@@ -1,8 +1,9 @@
 import glob
-from fs import *
+import os
+from busybox.fs import *
 
 fileSystem = FileSystem()
-programs   = {}
+programs = {}
 
 class Output():
 	def __init__(self):
@@ -39,8 +40,10 @@ def execution_function(func):
 			func(s, params)
 	return wrapper
 
-# Import everything in programs directory
-for prog in glob.glob('programs/*.py'):
-	prog = prog.replace('/', '.').replace('.py', '')
-	if prog == 'programs.__init__' or prog == 'programs.program': continue
-	__import__(prog)
+def loader():
+	# Import everything in programs directory
+	program_dir = os.path.dirname(os.path.abspath(__file__)).replace(os.getcwd() + '/', '')
+	for prog in glob.glob(program_dir + '/*.py'):
+		prog = prog[prog.find('busybox/programs/'):].replace('/', '.').replace('.py', '')
+		if prog.endswith('__init__') or prog.endswith('.program'): continue
+		__import__(prog)

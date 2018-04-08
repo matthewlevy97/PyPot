@@ -867,79 +867,6 @@ class TelnetHandlerBase(SocketServer.BaseRequestHandler):
         except EOFError:
             pass
 
-# ------------------------------- Basic Commands ---------------------------
-
-# Format of docstrings for command methods:
-# Line 0:  Command paramater(s) if any. (Can be blank line)
-# Line 1:  Short descriptive text. (Mandatory)
-# Line 2+: Long descriptive text. (Can be blank line)
-
-    def cmdHELP(self, params):
-        """[<command>]
-        Display help
-        Display either brief help on all commands, or detailed
-        help on a single command passed as a parameter.
-        """
-        if params:
-            cmd = params[0].upper()
-            if self.COMMANDS.has_key(cmd):
-                method = self.COMMANDS[cmd]
-                doc = method.__doc__.split("\n")
-                docp = doc[0].strip()
-                docl = '\n'.join( [l.strip() for l in doc[2:]] )
-                if not docl.strip():  # If there isn't anything here, use line 1
-                    docl = doc[1].strip()
-                self.writeline(
-                    "%s %s\n\n%s" % (
-                        cmd,
-                        docp,
-                        docl,
-                    )
-                )
-                return
-            else:
-                self.writeline("Command '%s' not known" % cmd)
-        else:
-            self.writeline("Help on built in commands\n")
-        keys = self.COMMANDS.keys()
-        keys.sort()
-        for cmd in keys:
-            method = self.COMMANDS[cmd]
-            if getattr(method, 'hidden', False):
-                continue
-            doc = method.__doc__.split("\n")
-            docp = doc[0].strip()
-            docs = doc[1].strip()
-            if len(docp) > 0:
-                docps = "%s - %s" % (docp, docs, )
-            else:
-                docps = "- %s" % (docs, )
-            self.writeline(
-                "%s %s" % (
-                    cmd,
-                    docps,
-                )
-            )
-    cmdHELP.aliases = ['?']
-
-    def cmdEXIT(self, params):
-        """
-        Exit the command shell
-        """
-        self.RUNSHELL = False
-        self.writeline("Goodbye")
-    cmdEXIT.aliases = ['QUIT', 'BYE', 'LOGOUT']
-
-    def cmdHISTORY(self, params):
-        """
-        Display the command history
-        """
-        cnt = 0
-        self.writeline('Command history\n')
-        for line in self.history:
-            cnt = cnt + 1
-            self.writeline("%-5d : %s" % (cnt, ''.join(line)))
-
 # ----------------------- Command Line Processor Engine --------------------
 
     def handleException(self, exc_type, exc_param, exc_tb):
@@ -985,7 +912,7 @@ class TelnetHandlerBase(SocketServer.BaseRequestHandler):
             self.input = self.input_reader(self, raw_input)
             self.raw_input = self.input.raw
             if self.input.cmd:
-                cmd = self.input.cmd
+                cmd = self.input.cmd.lower()
                 params = self.input.params
                 
 		# Custom code for this project
@@ -1007,21 +934,3 @@ class TelnetHandlerBase(SocketServer.BaseRequestHandler):
 					self.writeerror(shell_result['stderr'])
 			else:
 				self.writeerror(self.ERROR_MSG % cmd)
-                
-                '''
-                if self.COMMANDS.has_key(cmd):
-                    try:
-                        self.COMMANDS[cmd](params)
-                    except:
-                        self.logging.exception('Error calling %s.' % cmd)
-                        (t, p, tb) = sys.exc_info()
-                        if self.handleException(t, p, tb):
-                            break
-                else:
-                    self.writeerror("Unknown command '%s'" % cmd)
-                '''
-        self.logging.debug("Exiting handler")
-
-
-
-# vim: set syntax=python ai showmatch:

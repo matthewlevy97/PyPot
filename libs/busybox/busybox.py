@@ -1,6 +1,6 @@
 import sys
-#from programs import programs, fileSystem, stdout, stderr
 from programs.program import *
+loader()
 
 class Shell():
 	ERROR   = False
