@@ -8,7 +8,7 @@ class FileSystem():
 		self.reset()
 	
 	def reset(self):
-		with open('libs/busybox/fs.json', 'r') as f:
+		with open('fs.json', 'r') as f:
 			self.__files = json.load(f)
 		self.__cwd = []
 	

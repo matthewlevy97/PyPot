@@ -1,5 +1,6 @@
 import sys
-from programs import programs, fileSystem, stdout, stderr
+#from programs import programs, fileSystem, stdout, stderr
+from programs.program import *
 
 class Shell():
 	ERROR   = False
@@ -102,4 +103,8 @@ class Shell():
 if __name__ == '__main__':
 	shell = Shell()
 	while True:
-		shell.parse(raw_input('%s> ' % fileSystem.getCWD()))
+		output = shell.parse(raw_input('%s> ' % fileSystem.getCWD()).split(' '))
+		if output['stdout']:
+			print output['stdout']
+		if output['stderr']:
+			print output['stderr']
