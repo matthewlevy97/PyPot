@@ -1,14 +1,13 @@
-from SimpleHTTPServer import *
+from BaseHTTPServer import *
 from time import strftime
-import SocketServer
+import threading
+import socket
 
 from database import databaseConnection
 
 DEFAULT_HTTP_RESPONSE = '<h1>This page exists</h1>'
 
-class HTTPHandlerServer(SimpleHTTPRequestHandler):
-	def __init__(self, request, cli_addr, server):
-		SimpleHTTPRequestHandler.__init__(self, request, cli_addr, server)
+class HTTPHandler(BaseHTTPRequestHandler):
 	def do_GET(self):
 		self.__logRequest()
 		response = self.__generateResponse()
@@ -27,10 +26,10 @@ class HTTPHandlerServer(SimpleHTTPRequestHandler):
 		databaseConnection.insertHTTPConnection(self.client_address[0], self.client_address[1], self.path, self.command, self.headers.getheader('user-agent'), body)
 	
 	def __generateResponse(self):
-		responses = databaseConnection.getHTTPResponse(self.path, self.command)
-		if len(responses) < 1:
+		response = databaseConnection.getHTTPResponse(self.path, self.command)
+		if not response:
 			return DEFAULT_HTTP_RESPONSE
-		return responses[0]
+		return response
 	
 	def __sendResponse(self, response):
 		self.send_response(200)
@@ -38,8 +37,25 @@ class HTTPHandlerServer(SimpleHTTPRequestHandler):
 		self.end_headers()
 		self.wfile.write(response)
 
-def createServer(port=80):
-	return SocketServer.TCPServer(('', port), HTTPHandlerServer)
+def createServer(port=80, numberThreads=10):
+	addr = ('', port)
+	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+	sock.bind(addr)
+	sock.listen(10)
+	
+	class HTTPThread(threading.Thread):
+		def __init__(self):
+			threading.Thread.__init__(self)
+			self.daemon = True
+			self.start()
+		def run(self):
+			httpd = HTTPServer(addr, HTTPHandler, False)
+			httpd.socket = sock
+			httpd.server_bind = self.server_close = lambda self: None
+			httpd.serve_forever()
+	
+	return [HTTPThread() for i in range(numberThreads)]
 
 if __name__=='__main__':
-	createServer(9999).serve_forever()
+	createServer(numberThreads=2)

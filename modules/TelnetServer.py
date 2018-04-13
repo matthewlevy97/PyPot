@@ -14,3 +14,7 @@ class TelnetServerHandler(TelnetHandler):
 
 class TelnetServer(SocketServer.TCPServer):
 	allow_reuse_address = True
+
+def createServer(port=23):
+	server = TelnetServer(('0.0.0.0', port), TelnetServerHandler)
+	server.serve_forever()
