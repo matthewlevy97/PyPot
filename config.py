@@ -12,12 +12,5 @@ configuration = {
 		'enable': True,
 		'port': 9999,
 		'threads': 15
-	},
-	'database': {
-		'max_repeat_ip_addresses': 15
-	},
-	'telnet_server': {
-		'enable': True,
-		'port': 9998
 	}
 }

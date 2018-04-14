@@ -3,7 +3,7 @@ from time import strftime
 import threading
 import socket
 
-from database import databaseConnection
+from httpDatabase import databaseConnection
 
 DEFAULT_HTTP_RESPONSE = '<h1>This page exists</h1>'
 
@@ -19,7 +19,7 @@ class HTTPHandler(BaseHTTPRequestHandler):
 	
 	def __logRequest(self):
 		body = ''
-		length = int(self.headers.getheader('content-length', 0))
+		length = int(self.headers.getheader('Content-Length', 0))
 		if length:
 			body = self.rfile.read(length)
 		
@@ -33,7 +33,7 @@ class HTTPHandler(BaseHTTPRequestHandler):
 	
 	def __sendResponse(self, response):
 		self.send_response(200)
-		self.send_header("Content-length", len(response))
+		self.send_header("Content-Length", len(response))
 		self.end_headers()
 		self.wfile.write(response)
 
@@ -55,7 +55,8 @@ def createServer(port=80, numberThreads=10):
 			httpd.server_bind = self.server_close = lambda self: None
 			httpd.serve_forever()
 	
-	return [HTTPThread() for i in range(numberThreads)]
+	threads = [HTTPThread() for i in range(numberThreads)]
+	databaseConnection.flushQueue()
 
 if __name__=='__main__':
-	createServer(numberThreads=2)
+	createServer(port=9998, numberThreads=5)

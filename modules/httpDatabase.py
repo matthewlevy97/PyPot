@@ -1,16 +1,19 @@
 from Queue import Queue
 import sqlite3
+import thread
 
 from config import configuration
 
-MAX_IP_ENTRIES = configuration['database']['max_repeat_ip_addresses']
-
 class DatabaseConnector():
 	def __init__(self, filename="honeycomb.db"):
+		self.__filename = filename
 		self.__httpConnectionQueue = Queue()
-		self.__conn = sqlite3.connect(filename)
-		self.__createDatabase()
+		self.__connect()
 		self.__getHTTPResponses()
+	
+	def __connect(self):
+		self.__conn = sqlite3.connect(self.__filename)
+		self.__createDatabase()
 	
 	########### NON-THREAD SAFE METHODS ##############
 	def __createDatabase(self):
@@ -41,24 +44,27 @@ class DatabaseConnector():
 				'html_response': row[2]
 			})
 	
-	def flushQueues(self):
-		data = self.__httpConnectionQueue.get()
-		while data:
-			c = self.__conn.cursor()
-			for row in self.__conn.execute("SELECT count(src_ip) FROM http_connections WHERE src_ip='?'", (ip)):
-				if row[0] > MAX_IP_ENTRIES: return
-			
-			c.execute('''INSERT INTO http_connections
-			(src_ip, src_port, path, method, user_agent, body)
-			VALUES
-			(?, ?, ?, ?, ?, ?)
-			''', (ip, port, path, method, user_agent, body))
+	def flushQueue(self):
+		import time
+		c = self.__conn.cursor()
+		while True:
+			time.sleep(1)
 			data = self.__httpConnectionQueue.get()
-		self.__conn.commit()
+			while data:
+				c.execute('''INSERT INTO http_connections
+				(src_ip, src_port, path, method, user_agent, body)
+				VALUES
+				(?, ?, ?, ?, ?, ?)
+				''', (data['ip'], data['port'], data['path'], data['method'], data['user_agent'], data['body']))
+				try:
+					data = self.__httpConnectionQueue.get(block=False)
+				except:
+					break
+			self.__conn.commit()
 	
 	############### THREAD SAFE METHODS #################
 	def insertHTTPConnection(self, ip, port, path, method, user_agent, body=''):
-		self.__httpConnectionQueue.put({'ip': ip, 'port': port, 'method': method, 'user_agent': user_agent, 'body': body})
+		self.__httpConnectionQueue.put({'ip': ip, 'port': port, 'path': path, 'method': method, 'user_agent': user_agent, 'body': body})
 	
 	def getHTTPResponse(self, path, method):
 		ret = None
@@ -69,7 +75,7 @@ class DatabaseConnector():
 				ret = entry['html_response']
 				break
 		return ret
-	
+
 databaseConnection = DatabaseConnector()
 
 if __name__=='__main__':
